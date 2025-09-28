@@ -47,7 +47,7 @@ export default function TransfersDialog({
             <p className="text-sm">Your future downloads will appear here.</p>
           </div>
         ) : (
-          <div className="flex min-w-0 flex-col gap-2 rounded-lg bg-[#fafafa] p-4 dark:bg-[#1a1a1a]">
+          <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-[#fafafa] p-4 dark:bg-[#1a1a1a]">
             {transfers.map((transfer) => (
               <TransferCard
                 transfer={transfer}

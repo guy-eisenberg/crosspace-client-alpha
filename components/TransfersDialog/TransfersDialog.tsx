@@ -25,26 +25,21 @@ export default function TransfersDialog({
   onTransferResume: (transferId: string) => void;
   onTransferDelete: (transferId: string) => void;
 } & DialogProps) {
-  const description = (() => {
-    switch (transfers.length) {
-      case 0:
-        return "There are currently no downloads.";
-      default:
-        return `There are ${transfers.length} downloads.`;
-    }
-  })();
-
   return (
     <Dialog {...rest} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Downloads</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          <DialogDescription>
+            Inspect and control your downloads here.
+          </DialogDescription>
         </DialogHeader>
         {transfers.length === 0 ? (
           <div className="flex h-64 flex-col items-center justify-center gap-4 rounded-lg border border-dashed bg-[#fafafa] dark:bg-[#1a1a1a]">
-            <MeerkatsIcon className="w-36" />
-            <p className="text-sm">Your future downloads will appear here.</p>
+            <MeerkatsIcon className="w-36 opacity-50" />
+            <p className="text-sm opacity-50">
+              Your future downloads will appear here.
+            </p>
           </div>
         ) : (
           <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-[#fafafa] p-4 dark:bg-[#1a1a1a]">

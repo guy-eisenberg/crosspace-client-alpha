@@ -13,6 +13,7 @@ export interface SpaceMetadata {
 
 export interface SpaceMemberMetadata {
   ioId: string;
+  connectedAt: string;
   userId: string;
   agent: string;
 }
@@ -68,3 +69,10 @@ export interface TransferMetadata {
   };
   running: boolean;
 }
+
+export type ChatMessageMetadata = {
+  id: string;
+  from: string; // User id
+  timestamp: number;
+  contents: string;
+};

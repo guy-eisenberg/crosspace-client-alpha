@@ -20,4 +20,6 @@ export enum SpaceEvents {
   SpaceEntriesDelete = "SpaceEntriesDelete",
   SpaceEntriesUpdate = "SpaceEntriesUpdate",
   SpacePathReplace = "SpacePathReplace",
+  SpaceChatSync = "SpaceChatSync",
+  SpaceNewChatMessage = "SpaceNewChatMessage",
 }

@@ -1,3 +1,4 @@
+import ChatProvider from "@/context/ChatContext";
 import LogProvider from "@/context/LogProvider";
 import RTCProvider from "@/context/RTCContext/RTCContext";
 import SWProvider from "@/context/SWContext";
@@ -52,17 +53,19 @@ export default async function RootLayout({
           <SWProvider>
             <RTCProvider userId={auth.id} iceServers={iceServers}>
               <TransfersProvider>
-                <ThemeProvider
-                  attribute="class"
-                  defaultTheme="system"
-                  enableSystem
-                  disableTransitionOnChange
-                >
-                  {navbar}
-                  <main className="relative flex min-h-0 flex-1 flex-col">
-                    {children}
-                  </main>
-                </ThemeProvider>
+                <ChatProvider>
+                  <ThemeProvider
+                    attribute="class"
+                    defaultTheme="system"
+                    enableSystem
+                    disableTransitionOnChange
+                  >
+                    {navbar}
+                    <main className="relative flex min-h-0 flex-1 flex-col">
+                      {children}
+                    </main>
+                  </ThemeProvider>
+                </ChatProvider>
               </TransfersProvider>
             </RTCProvider>
           </SWProvider>

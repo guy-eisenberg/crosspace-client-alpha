@@ -4,6 +4,7 @@ import { io } from "@/clients/client/ably";
 import { indexed } from "@/clients/client/indexed";
 import SeaCatIcon from "@/components/assets/SeaCatIcon";
 import AutoWidthInput from "@/components/AutoWidthInput";
+import ChatContainer from "@/components/ChatContainer/ChatContainer";
 import FileExplorer from "@/components/FileExplorer/FileExplorer";
 import ShareSpaceDialog from "@/components/ShareSpaceDialog";
 import TransfersDialog from "@/components/TransfersDialog/TransfersDialog";
@@ -14,7 +15,15 @@ import {
   StatusIndicator,
   StatusLabel,
 } from "@/components/ui/shadcn-io/status";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { SpaceEvents } from "@/constants";
+import { useChat } from "@/context/ChatContext";
 import { useRTC } from "@/context/RTCContext/RTCContext";
 import { useTransfers } from "@/context/TransfersContext/TransfersContext";
 import { dateLabel } from "@/lib/dateLabel";
@@ -26,6 +35,7 @@ import strDecrypt from "@/lib/strDecrypt";
 import strEncrypt from "@/lib/strEncrypt";
 import { cn } from "@/lib/utils";
 import type {
+  ChatMessageMetadata,
   DirEntryMetadata,
   FileEntryMetadata,
   FileIndexedMetadata,
@@ -70,6 +80,8 @@ export default function SpacePageClient({
   } = useTransfers();
   const incomingTransferesArr = Object.values(incomingTransfers);
   const incomingTransfersCount = incomingTransferesArr.length;
+
+  const { chats, addChatMessage, setChats } = useChat();
 
   const { getRootProps, getInputProps, open, isDragActive } = useDropzone({
     noClick: true,
@@ -238,13 +250,18 @@ export default function SpacePageClient({
   const [members, setMembers] = useState<{
     [peerIOId: string]: {
       peerIOId: string;
+      connectedAt: number;
       member: SpaceMemberMetadata;
       connected: boolean;
     };
   }>({});
-  const connectedMembers = Object.values(members).filter((m) => m.connected);
-  const connectingMembers = Object.values(members).filter(
-    (m) => m.connected === false,
+  const connectedMembers = useMemo(
+    () => Object.values(members).filter((m) => m.connected),
+    [members],
+  );
+  const connectingMembers = useMemo(
+    () => Object.values(members).filter((m) => m.connected === false),
+    [members],
   );
 
   const membersCount = Object.values(members).length;
@@ -253,6 +270,9 @@ export default function SpacePageClient({
 
   const [shareSpaceDialogOpen, setShareSpaceDialogOpen] = useState(false);
   const [transfersDialogOpen, setTransfersDialogOpen] = useState(false);
+
+  const [unreadChatMessages, setUnreadChatMessages] = useState(0);
+  const [chatSheetOpen, setChatSheetOpen] = useState(false);
 
   const sendToMember = useCallback(
     async (
@@ -412,7 +432,7 @@ export default function SpacePageClient({
     initPresence();
 
     async function initPresence() {
-      const thisMember: SpaceMemberMetadata = {
+      const thisMember: Omit<SpaceMemberMetadata, "connectedAt"> = {
         ioId: io.connection.id!,
         userId: auth.id,
         agent: navigator.userAgent,
@@ -424,7 +444,12 @@ export default function SpacePageClient({
 
         setMembers((members) => ({
           ...members,
-          [peerIOId]: { peerIOId, member: member.data, connected: false },
+          [peerIOId]: {
+            peerIOId,
+            connectedAt: new Date().getTime(),
+            member: member.data,
+            connected: false,
+          },
         }));
       }
 
@@ -440,14 +465,24 @@ export default function SpacePageClient({
 
           setMembers((members) => ({
             ...members,
-            [peerIOId]: { peerIOId, member: member.data, connected: false },
+            [peerIOId]: {
+              peerIOId,
+              connectedAt: new Date().getTime(),
+              member: member.data,
+              connected: false,
+            },
           }));
 
           await connect(peerIOId);
 
           await sendToMember(peerIOId, {
             event: SpaceEvents.SpaceConnectAck,
-            data: { member: thisMember },
+            data: { peerIOId: thisMember.ioId },
+          });
+
+          await sendToMember(peerIOId, {
+            event: SpaceEvents.SpaceChatSync,
+            data: { chat: chats[_space.id] },
           });
 
           setMembers((members) => ({
@@ -469,26 +504,23 @@ export default function SpacePageClient({
         }
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connect, disconnect, sendToMember, auth.id, _space.id]);
 
   useEffect(() => {
     const spaceConnectAckReqUnsubscribe = onRTCEvent(
       SpaceEvents.SpaceConnectAck,
       (_, data) => {
-        const { spaceId, member } = data as {
+        const { spaceId, peerIOId } = data as {
           spaceId: string;
-          member: {
-            ioId: string;
-            userId: string;
-            agent: string;
-          };
+          peerIOId: string;
         };
 
         if (spaceId !== _space.id) return;
 
         setMembers((members) => ({
           ...members,
-          [member.ioId]: { ...members[member.ioId], connected: true },
+          [peerIOId]: { ...members[peerIOId], connected: true },
         }));
       },
     );
@@ -618,10 +650,6 @@ export default function SpacePageClient({
 
         if (spaceId !== _space.id) return;
 
-        console.log(oldBasePath);
-        console.log(newBasePath);
-        console.log(newBasePath + path.slice(oldBasePath.length));
-
         if (path.startsWith(oldBasePath))
           setPath(newBasePath + path.slice(oldBasePath.length));
       },
@@ -646,6 +674,66 @@ export default function SpacePageClient({
     _space.id,
     path,
   ]);
+
+  useEffect(() => {
+    const spaceChatSyncUnsubscribe = onRTCEvent(
+      SpaceEvents.SpaceChatSync,
+      (_, data) => {
+        const { spaceId, chat: newChat } = data as {
+          spaceId: string;
+          chat: ChatMessageMetadata[];
+        };
+
+        if (spaceId !== _space.id || newChat == undefined) return;
+
+        setChats((chats) => {
+          const currentChat = chats[_space.id] || [];
+          const currentChatLatestTimestamp = currentChat.reduce(
+            (maxTimestamp, message) => {
+              if (message.timestamp > maxTimestamp) return message.timestamp;
+
+              return maxTimestamp;
+            },
+            0,
+          );
+
+          const newChatLatestTimestamp = newChat.reduce(
+            (maxTimestamp, message) => {
+              if (message.timestamp > maxTimestamp) return message.timestamp;
+
+              return maxTimestamp;
+            },
+            0,
+          );
+
+          if (newChatLatestTimestamp >= currentChatLatestTimestamp)
+            chats[_space.id] = newChat;
+
+          return chats;
+        });
+      },
+    );
+
+    const spaceNewChatMessageUnsubscribe = onRTCEvent(
+      SpaceEvents.SpaceNewChatMessage,
+      (_, data) => {
+        const { spaceId, message } = data as {
+          spaceId: string;
+          message: ChatMessageMetadata;
+        };
+
+        if (spaceId !== _space.id) return;
+
+        if (!chatSheetOpen) setUnreadChatMessages((count) => count + 1);
+        addChatMessage(_space.id, message);
+      },
+    );
+
+    return () => {
+      spaceChatSyncUnsubscribe();
+      spaceNewChatMessageUnsubscribe();
+    };
+  }, [_space.id, onRTCEvent, addChatMessage, setChats, chatSheetOpen]);
 
   useEffect(() => {
     if (!space) return;
@@ -843,8 +931,20 @@ export default function SpacePageClient({
                 <Button onClick={open}>
                   Add <PlusIcon strokeWidth={3} />
                 </Button>
-                <Button variant="secondary" disabled>
+                <Button
+                  className="relative"
+                  variant="secondary"
+                  onClick={() => {
+                    setChatSheetOpen(true);
+                    setUnreadChatMessages(0);
+                  }}
+                >
                   Chat <MessageCircleMoreIcon strokeWidth={3} />
+                  {unreadChatMessages > 0 && (
+                    <span className="absolute top-0 right-0 h-4 w-4 translate-x-1/2 -translate-y-1/2 rounded-full bg-red-400 text-[10px] leading-4 font-bold">
+                      {unreadChatMessages}
+                    </span>
+                  )}
                 </Button>
 
                 {/* <Button
@@ -942,6 +1042,35 @@ export default function SpacePageClient({
         onTransferResume={resumeTransfer}
         onTransferDelete={deleteTransfer}
       />
+
+      <Sheet open={chatSheetOpen} onOpenChange={setChatSheetOpen}>
+        <SheetContent className="w-full sm:w-3/4">
+          <SheetHeader>
+            <SheetTitle>{space.name} Chat</SheetTitle>
+            <SheetDescription>
+              Chat with other connected users.
+            </SheetDescription>
+          </SheetHeader>
+          <ChatContainer
+            userId={auth.id}
+            chat={chats[space.id] || []}
+            onSend={async (contents) => {
+              const message = {
+                id: uuid(),
+                from: auth.id,
+                timestamp: new Date().getTime(),
+                contents,
+              };
+
+              addChatMessage(space.id, message);
+
+              await emitToMembers(SpaceEvents.SpaceNewChatMessage, {
+                message,
+              });
+            }}
+          />
+        </SheetContent>
+      </Sheet>
     </>
   );
 

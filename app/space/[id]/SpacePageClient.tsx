@@ -281,7 +281,10 @@ export default function SpacePageClient({
 
   const getPathEntries = useCallback(
     async (path: string) => {
-      const pathFilesArr = await FileUtils.getPathFiles(_space.id, path);
+      const pathFilesArr = await indexed.spaces_files
+        .where("[spaceId+path]")
+        .between([_space.id, path], [_space.id, path + "\uffff"])
+        .toArray();
 
       return pathFilesArr.reduce(
         (obj, file) => ({

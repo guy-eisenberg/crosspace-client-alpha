@@ -1,6 +1,8 @@
 import { CHUNK_SIZE } from "@/constants";
-import type { FileEntryMetadata } from "@/types";
+import type { DirEntryMetadata, FileEntryMetadata } from "@/types";
 
-export function getEntryTotalChunks(entry: FileEntryMetadata) {
+export function getEntryTotalChunks(
+  entry: FileEntryMetadata | DirEntryMetadata,
+) {
   return Math.ceil(entry.size / CHUNK_SIZE);
 }

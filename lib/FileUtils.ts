@@ -109,13 +109,6 @@ export class FileUtils {
     });
   }
 
-  static async getPathFiles(spaceId: string, path: string) {
-    return await indexed.spaces_files
-      .where("[spaceId+path]")
-      .between([spaceId, path], [spaceId, path + "\uffff"])
-      .toArray();
-  }
-
   static async putFiles(files: FileIndexedMetadata[]) {
     await indexed.spaces_files.bulkPut(files);
   }

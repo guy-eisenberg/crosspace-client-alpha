@@ -1,8 +1,13 @@
+import { indexed } from "@/clients/client/indexed";
 import { fileSizeLabel } from "@/lib/fileSizeLabel";
+import { getEntryTotalChunks } from "@/lib/getEntryTotalChunks";
 import { timeAgoLabel } from "@/lib/timeAgoLabel";
 import { cn } from "@/lib/utils";
 import type { DirEntryMetadata, FileEntryMetadata } from "@/types";
+import Dexie from "dexie";
 import { EllipsisVerticalIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import CircularProgress from "../CircularProgress";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
@@ -12,7 +17,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
-import { Spinner } from "../ui/shadcn-io/spinner";
 import FileThumbnail from "./FileThumbnail";
 
 export default function ExplorerCell({
@@ -29,6 +33,36 @@ export default function ExplorerCell({
   renameFile: () => void;
   downloadFile: () => void;
 } & React.HTMLAttributes<HTMLDivElement>) {
+  const [saveProgress, setSaveProgress] = useState(0);
+
+  useEffect(() => {
+    if (entry.type === "dir" || entry.saveDone) return;
+
+    const totalChunks = getEntryTotalChunks(entry);
+
+    const UPDATE_RATE = 1;
+
+    const updateInterval = setInterval(async () => {
+      const savedChunksCount = await indexed.spaces_files_chunks
+        .where("[spaceId+id+index]")
+        .between(
+          [entry.spaceId, entry.id, Dexie.minKey],
+          [entry.spaceId, entry.id, Dexie.maxKey],
+        )
+        .count();
+
+      const progress = Math.floor((savedChunksCount / totalChunks) * 100);
+
+      if (progress >= 100) clearInterval(updateInterval);
+
+      setSaveProgress(progress);
+    }, 1000 / UPDATE_RATE);
+
+    return () => {
+      clearInterval(updateInterval);
+    };
+  }, [entry]);
+
   const ext = entry.name.split(".").pop();
 
   return (
@@ -58,10 +92,14 @@ export default function ExplorerCell({
           )}
           checked
         />
+
         {entry.type === "file" && !entry.saveDone && (
-          <Spinner
-            className="text-primary absolute top-2 left-1"
-            variant="circle"
+          <CircularProgress
+            className="absolute top-2 left-2"
+            size={24}
+            fillColor="#007f70"
+            total={100}
+            current={saveProgress}
           />
         )}
         <DropdownMenu>
@@ -126,7 +164,7 @@ export default function ExplorerCell({
         <span className="overflow-hidden overflow-ellipsis whitespace-nowrap">
           {entry.name}
         </span>
-        {entry.type !== "dir" && (
+        {entry.type === "file" && (
           <Badge
             className="bg-secondary border-border border"
             variant="secondary"

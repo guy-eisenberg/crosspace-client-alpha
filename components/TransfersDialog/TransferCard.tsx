@@ -4,9 +4,9 @@ import { getTransferTransferredBytes } from "@/lib/getTransferTransferredBytes";
 import type { TransferMetadata } from "@/types";
 import { PauseIcon, PlayIcon, TrashIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import FolderIcon from "./assets/FolderIcon";
-import FileThumbnail from "./FileExplorer/FileThumbnail";
-import { Progress } from "./ui/progress";
+import FileThumbnail from "../FileExplorer/FileThumbnail";
+import FolderIcon from "../assets/FolderIcon";
+import { Progress } from "../ui/progress";
 
 export default function TransferCard({
   transfer,

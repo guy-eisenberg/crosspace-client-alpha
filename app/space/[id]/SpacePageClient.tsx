@@ -4,9 +4,9 @@ import { io } from "@/clients/client/ably";
 import { indexed } from "@/clients/client/indexed";
 import SeaCatIcon from "@/components/assets/SeaCatIcon";
 import AutoWidthInput from "@/components/AutoWidthInput";
-import DownloadsDialog from "@/components/DownloadsDialog";
 import FileExplorer from "@/components/FileExplorer/FileExplorer";
 import ShareSpaceDialog from "@/components/ShareSpaceDialog";
+import TransfersDialog from "@/components/TransfersDialog/TransfersDialog";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/shadcn-io/spinner";
 import {
@@ -931,7 +931,7 @@ export default function SpacePageClient({
         space={space}
       />
 
-      <DownloadsDialog
+      <TransfersDialog
         open={transfersDialogOpen}
         onOpenChange={setTransfersDialogOpen}
         transfers={incomingTransferesArr}

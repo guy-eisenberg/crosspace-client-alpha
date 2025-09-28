@@ -1,8 +1,7 @@
 import type { TransferMetadata } from "@/types";
 import { type DialogProps } from "@radix-ui/react-dialog";
-import MeerkatsIcon from "./assets/MeerkatsIcon";
-import TransferCard from "./TransferCard";
-import { Button } from "./ui/button";
+import MeerkatsIcon from "../assets/MeerkatsIcon";
+import { Button } from "../ui/button";
 import {
   Dialog,
   DialogContent,
@@ -10,9 +9,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "./ui/dialog";
+} from "../ui/dialog";
+import TransferCard from "./TransferCard";
 
-export default function DownloadsDialog({
+export default function TransfersDialog({
   onOpenChange,
   transfers,
   onTransferPause,
@@ -35,7 +35,7 @@ export default function DownloadsDialog({
   })();
 
   return (
-    <Dialog {...rest}>
+    <Dialog {...rest} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Downloads</DialogTitle>

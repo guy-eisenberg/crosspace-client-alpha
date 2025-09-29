@@ -921,7 +921,7 @@ export default function SpacePageClient({
                     onClick={() => setTransfersDialogOpen(true)}
                   >
                     {incomingTransferesArr.length > 0 && (
-                      <span className="absolute top-0 right-0 h-4 w-4 translate-x-1/2 -translate-y-1/2 rounded-full bg-red-400 text-[10px] leading-4 font-bold">
+                      <span className="absolute top-0 right-0 h-4 w-4 translate-x-1/2 -translate-y-1/2 rounded-full bg-red-400 text-[10px] leading-4 font-bold text-white">
                         {incomingTransfersCount}
                       </span>
                     )}
@@ -941,7 +941,7 @@ export default function SpacePageClient({
                 >
                   Chat <MessageCircleMoreIcon strokeWidth={3} />
                   {unreadChatMessages > 0 && (
-                    <span className="absolute top-0 right-0 h-4 w-4 translate-x-1/2 -translate-y-1/2 rounded-full bg-red-400 text-[10px] leading-4 font-bold">
+                    <span className="absolute top-0 right-0 h-4 w-4 translate-x-1/2 -translate-y-1/2 rounded-full bg-red-400 text-[10px] leading-4 font-bold text-white">
                       {unreadChatMessages}
                     </span>
                   )}

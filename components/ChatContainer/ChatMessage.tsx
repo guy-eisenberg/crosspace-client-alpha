@@ -21,10 +21,10 @@ export default function ChatMessage({
         <div
           {...rest}
           className={cn(
-            "max-w-full rounded-lg px-3 py-2 text-sm break-words text-white",
+            "max-w-full rounded-lg px-3 py-2 text-sm break-words",
             type === "incoming"
               ? "bg-secondary rounded-bl-none"
-              : "bg-primary rounded-br-none",
+              : "bg-primary rounded-br-none text-white",
             rest.className,
           )}
         >
@@ -32,9 +32,7 @@ export default function ChatMessage({
           <p
             className={cn(
               "mt-1 text-[10px]",
-              type === "incoming"
-                ? "text-muted-foreground opacity-50"
-                : "text-primary-50",
+              type === "incoming" ? "text-muted-foreground" : "text-primary-50",
             )}
           >
             {timeAgoLabel(new Date(message.timestamp).getTime())}

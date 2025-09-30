@@ -423,15 +423,17 @@ class RTCConnection {
           JSON.stringify({ id, final: partNumber >= parts.length, part }),
         );
 
-        if (part.length >= RTC_CHUNK_SIZE) {
-          await new Promise<void>((res) => {
-            this.dc!.onbufferedamountlow = () => {
-              res();
-            };
-          });
-        }
-
         partNumber += 1;
+
+        await new Promise<void>((res) => {
+          this.dc!.addEventListener(
+            "bufferedamountlow",
+            () => {
+              res();
+            },
+            { once: true },
+          );
+        });
       }
     }
   }

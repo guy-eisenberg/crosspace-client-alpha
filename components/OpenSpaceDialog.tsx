@@ -1,7 +1,8 @@
 "use client";
 
 import { io } from "@/clients/client/ably";
-import { SPACE_OTP_LENGTH } from "@/constants";
+import { SPACE_OTP_LENGTH, SpaceEvents } from "@/constants";
+import { useLoading } from "@/context/LoadingContext/LoadingContext";
 import { useRTC } from "@/context/RTCContext/RTCContext";
 import { submitSpaceOTP } from "@/lib/server/submitSpaceOTP";
 import { type DialogProps } from "@radix-ui/react-dialog";
@@ -25,6 +26,8 @@ export default function OpenSpaceDialog({
   ...rest
 }: DialogProps) {
   const router = useRouter();
+
+  const { showLoading } = useLoading();
 
   const { onRTCEvent } = useRTC();
 
@@ -85,6 +88,8 @@ export default function OpenSpaceDialog({
               <Button
                 disabled={otp.length < SPACE_OTP_LENGTH}
                 onClick={async () => {
+                  const hideLoading = showLoading();
+
                   const newRequestId = await submitSpaceOTP(
                     otp,
                     io.connection.id as string,
@@ -92,7 +97,7 @@ export default function OpenSpaceDialog({
 
                   if (newRequestId) {
                     const clearListener = onRTCEvent(
-                      "SpaceUrlResponse",
+                      SpaceEvents.SpaceUrlRes,
                       (_, data) => {
                         const { requestId, url } = data as {
                           requestId: string;
@@ -102,6 +107,7 @@ export default function OpenSpaceDialog({
                         if (requestId === newRequestId) {
                           router.replace(url);
                           clearListener();
+                          hideLoading();
                         }
                       },
                     );

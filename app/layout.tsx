@@ -1,4 +1,5 @@
 import ChatProvider from "@/context/ChatContext";
+import { LoadingProvider } from "@/context/LoadingContext/LoadingContext";
 import LogProvider from "@/context/LogProvider";
 import RTCProvider from "@/context/RTCContext/RTCContext";
 import SWProvider from "@/context/SWContext";
@@ -60,10 +61,12 @@ export default async function RootLayout({
                     enableSystem
                     disableTransitionOnChange
                   >
-                    {navbar}
-                    <main className="relative flex min-h-0 flex-1 flex-col">
-                      {children}
-                    </main>
+                    <LoadingProvider>
+                      {navbar}
+                      <main className="relative flex min-h-0 flex-1 flex-col">
+                        {children}
+                      </main>
+                    </LoadingProvider>
                   </ThemeProvider>
                 </ChatProvider>
               </TransfersProvider>

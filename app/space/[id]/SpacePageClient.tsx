@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/sheet";
 import { SpaceEvents } from "@/constants";
 import { useChat } from "@/context/ChatContext";
+import { useLoading } from "@/context/LoadingContext/LoadingContext";
 import { useRTC } from "@/context/RTCContext/RTCContext";
 import { useTransfers } from "@/context/TransfersContext/TransfersContext";
 import { dateLabel } from "@/lib/dateLabel";
@@ -83,6 +84,8 @@ export default function SpacePageClient({
   const incomingTransfersCount = incomingTransferesArr.length;
 
   const { chats, addChatMessage, setChats } = useChat();
+
+  const { showLoading } = useLoading();
 
   const { getRootProps, getInputProps, open, isDragActive } = useDropzone({
     noClick: true,
@@ -468,8 +471,12 @@ export default function SpacePageClient({
     loadSpace();
 
     async function loadSpace() {
+      const hideLoading = showLoading();
+
       await loadKeyFragment();
       await decryptSpace();
+
+      hideLoading();
     }
 
     async function loadKeyFragment() {
@@ -506,7 +513,7 @@ export default function SpacePageClient({
       });
       setSpaceName(name);
     }
-  }, [router, _space]);
+  }, [router, _space, showLoading]);
 
   useEffect(() => {
     const spaceChannel = io.channels.get(`space#${_space.id}`);

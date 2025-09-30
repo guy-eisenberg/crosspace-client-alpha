@@ -33,6 +33,7 @@
     "heic2any": "^0.0.4",
     "input-otp": "^1.4.2",
     "logrocket": "^10.1.0",
+    "lottie-react": "^2.4.1",
     "lucide-react": "^0.544.0",
     "motion": "^12.23.22",
     "next": "15.5.4",

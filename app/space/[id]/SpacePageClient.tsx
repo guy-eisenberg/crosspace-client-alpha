@@ -6,6 +6,7 @@ import SeaCatIcon from "@/components/assets/SeaCatIcon";
 import AutoWidthInput from "@/components/AutoWidthInput";
 import ChatContainer from "@/components/ChatContainer/ChatContainer";
 import FileExplorer from "@/components/FileExplorer/FileExplorer";
+import ProgressBar from "@/components/ProgressBar";
 import ShareSpaceDialog from "@/components/ShareSpaceDialog";
 import TransfersDialog from "@/components/TransfersDialog/TransfersDialog";
 import { Button } from "@/components/ui/button";
@@ -265,14 +266,14 @@ export default function SpacePageClient({
   );
 
   const membersCount = Object.values(members).length;
-  const connectedMembersCount = connectedMembers.length;
-  const connectingMembersCount = connectingMembers.length;
 
   const [shareSpaceDialogOpen, setShareSpaceDialogOpen] = useState(false);
   const [transfersDialogOpen, setTransfersDialogOpen] = useState(false);
 
   const [unreadChatMessages, setUnreadChatMessages] = useState(0);
   const [chatSheetOpen, setChatSheetOpen] = useState(false);
+
+  const [pendingEntriesRequests, setPendingEntriesRequests] = useState(0);
 
   const sendToMember = useCallback(
     async (
@@ -297,6 +298,87 @@ export default function SpacePageClient({
       await Promise.all(promises);
     },
     [sendToMember, members],
+  );
+
+  const sendPathEntriesRequest = useCallback(
+    async (ioIds: string[], path: string) => {
+      setPendingEntriesRequests((count) => count + 1);
+
+      const promises: Promise<void>[] = [];
+
+      for (const ioId of ioIds) {
+        const promise = (async () => {
+          const requestId = uuid();
+
+          await sendToMember(ioId, {
+            event: SpaceEvents.SpaceEntriesReq,
+            data: {
+              requestId,
+              path,
+            },
+          });
+
+          await new Promise<void>((res) => {
+            const unsubscribe = onRTCEvent(
+              SpaceEvents.SpaceEntriesRes,
+              (peerIOId, data) => {
+                const {
+                  spaceId,
+                  requestId: targetRequestId,
+                  path: targetPath,
+                  entries: pathEntries,
+                } = data as {
+                  spaceId: string;
+                  requestId: string;
+                  path: string;
+                  entries: { [id: string]: FileEntryMetadata };
+                };
+
+                if (
+                  peerIOId !== ioId ||
+                  spaceId !== _space.id ||
+                  targetRequestId !== requestId ||
+                  targetPath !== path
+                )
+                  return;
+
+                setEntries((entries) => {
+                  const updated = { ...entries };
+
+                  for (const entry of Object.values(pathEntries)) {
+                    if (!entries[entry.id]) {
+                      updated[entry.id] = entry;
+                      continue;
+                    }
+
+                    if (entry.updatedAt < entries[entry.id].updatedAt) continue;
+
+                    updated[entry.id] = entry;
+                  }
+
+                  return updated;
+                });
+
+                unsubscribe();
+
+                res();
+              },
+            );
+          });
+        })();
+
+        promises.push(promise);
+      }
+
+      await Promise.all(promises);
+
+      setTimeout(
+        () =>
+          setPendingEntriesRequests((count) => (count === 0 ? 0 : count - 1)),
+        250,
+      );
+    },
+    [_space.id, onRTCEvent, sendToMember],
   );
 
   const getPathEntries = useCallback(
@@ -501,6 +583,18 @@ export default function SpacePageClient({
 
             return updated;
           });
+
+          setEntries((entries) => {
+            const updated = {} as {
+              [id: string]: FileEntryMetadata;
+            };
+
+            for (const entry of Object.values(entries)) {
+              if (entry.peerIOId !== peerIOId) updated[entry.id] = entry;
+            }
+
+            return updated;
+          });
         }
       });
     }
@@ -550,17 +644,18 @@ export default function SpacePageClient({
 
         if (spaceId !== _space.id || targetPath !== path) return;
 
-        await sendToMember(peerIOId, {
-          event: SpaceEvents.SpaceEntriesReq,
-          data: { path },
-        });
+        await sendPathEntriesRequest([peerIOId], path);
       },
     );
 
     const spaceEntriesReqUnsubscribe = onRTCEvent(
       SpaceEvents.SpaceEntriesReq,
       async (peerIOId, data) => {
-        const { spaceId, path } = data as { spaceId: string; path: string };
+        const { spaceId, requestId, path } = data as {
+          spaceId: string;
+          requestId: string;
+          path: string;
+        };
 
         if (spaceId !== _space.id) return;
 
@@ -568,41 +663,7 @@ export default function SpacePageClient({
 
         await sendToMember(peerIOId, {
           event: SpaceEvents.SpaceEntriesRes,
-          data: { path, entries },
-        });
-      },
-    );
-
-    const spaceEntriesResUnsubscribe = onRTCEvent(
-      SpaceEvents.SpaceEntriesRes,
-      (_, data) => {
-        const {
-          spaceId,
-          path: targetPath,
-          entries: pathEntries,
-        } = data as {
-          spaceId: string;
-          path: string;
-          entries: { [id: string]: FileEntryMetadata };
-        };
-
-        if (spaceId !== _space.id || targetPath !== path) return;
-
-        setEntries((entries) => {
-          const updated = { ...entries };
-
-          for (const entry of Object.values(pathEntries)) {
-            if (!entries[entry.id]) {
-              updated[entry.id] = entry;
-              continue;
-            }
-
-            if (entry.updatedAt < entries[entry.id].updatedAt) continue;
-
-            updated[entry.id] = entry;
-          }
-
-          return updated;
+          data: { requestId, path, entries },
         });
       },
     );
@@ -660,7 +721,6 @@ export default function SpacePageClient({
       spaceRenameUnsubscribe();
       spaceNewEntriesUnsubscribe();
       spaceEntriesReqUnsubscribe();
-      spaceEntriesResUnsubscribe();
       spaceEntriesDeleteUnsubscribe();
       spaceEntriesUpdateUnsubscribe();
       spacePathReplaceUnsubscribe();
@@ -668,6 +728,7 @@ export default function SpacePageClient({
   }, [
     onRTCEvent,
     sendToMember,
+    sendPathEntriesRequest,
     deleteEntries,
     updateEntries,
     getPathEntries,
@@ -760,7 +821,7 @@ export default function SpacePageClient({
   }, [space, connect, send]);
 
   useEffect(() => {
-    if (connectingMembersCount > 0) return;
+    if (connectingMembers.length > 0) return;
 
     loadPathEntries();
 
@@ -768,18 +829,17 @@ export default function SpacePageClient({
       const pathEntries = await getPathEntries(path);
       setEntries(pathEntries);
 
-      await emitToMembers(SpaceEvents.SpaceEntriesReq, {
-        spaceId: _space.id,
+      await sendPathEntriesRequest(
+        connectedMembers.map((m) => m.peerIOId),
         path,
-      });
+      );
     }
   }, [
-    _space.id,
     getPathEntries,
-    emitToMembers,
-    send,
+    sendPathEntriesRequest,
     path,
-    connectingMembersCount,
+    connectingMembers.length,
+    connectedMembers,
   ]);
 
   if (!space) return null;
@@ -838,7 +898,7 @@ export default function SpacePageClient({
             status={
               membersCount === 0
                 ? "gray"
-                : connectingMembersCount === 0
+                : connectingMembers.length === 0
                   ? "online"
                   : "degraded"
             }
@@ -846,11 +906,11 @@ export default function SpacePageClient({
             <StatusIndicator />
             {membersCount === 0 ? (
               <StatusLabel>No devices connected</StatusLabel>
-            ) : connectingMembersCount === 0 ? (
+            ) : connectingMembers.length === 0 ? (
               <StatusLabel>
-                {connectedMembersCount > 1 ? connectedMembersCount : "One"}{" "}
+                {connectedMembers.length > 1 ? connectedMembers.length : "One"}{" "}
                 device
-                {connectedMembersCount > 1 ? "s" : ""} connected
+                {connectedMembers.length > 1 ? "s" : ""} connected
               </StatusLabel>
             ) : (
               <StatusLabel>Connecting...</StatusLabel>
@@ -868,6 +928,10 @@ export default function SpacePageClient({
               "border-y border-dashed sm:border-x",
           )}
         >
+          <ProgressBar
+            className={cn("absolute top-0 right-0 left-0")}
+            show={pendingEntriesRequests > 0}
+          />
           <input {...getInputProps()} />
           {entriesWithDirsArr.length === 0 ? (
             <div

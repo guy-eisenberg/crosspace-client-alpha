@@ -3,10 +3,10 @@
 import { io } from "@/clients/client/ably";
 import { SPACE_OTP_LENGTH, SpaceEvents } from "@/constants";
 import { useLoading } from "@/context/LoadingContext/LoadingContext";
+import { useRouter } from "@/context/RouterContext";
 import { useRTC } from "@/context/RTCContext/RTCContext";
 import { submitSpaceOTP } from "@/lib/server/submitSpaceOTP";
 import { type DialogProps } from "@radix-ui/react-dialog";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "./ui/button";
 import {
@@ -98,14 +98,14 @@ export default function OpenSpaceDialog({
                   if (newRequestId) {
                     const clearListener = onRTCEvent(
                       SpaceEvents.SpaceUrlRes,
-                      (_, data) => {
+                      async (_, data) => {
                         const { requestId, url } = data as {
                           requestId: string;
                           url: string;
                         };
 
                         if (requestId === newRequestId) {
-                          router.replace(url);
+                          await router.replace(url);
                           clearListener();
                           hideLoading();
                         }

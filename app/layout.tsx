@@ -1,6 +1,7 @@
 import ChatProvider from "@/context/ChatContext";
 import { LoadingProvider } from "@/context/LoadingContext/LoadingContext";
 import LogProvider from "@/context/LogProvider";
+import RouterProvider from "@/context/RouterContext";
 import RTCProvider from "@/context/RTCContext/RTCContext";
 import SWProvider from "@/context/SWContext";
 import { TransfersProvider } from "@/context/TransfersContext/TransfersContext";
@@ -54,21 +55,23 @@ export default async function RootLayout({
           <SWProvider>
             <RTCProvider userId={auth.id} iceServers={iceServers}>
               <TransfersProvider>
-                <ChatProvider>
-                  <ThemeProvider
-                    attribute="class"
-                    defaultTheme="system"
-                    enableSystem
-                    disableTransitionOnChange
-                  >
-                    <LoadingProvider>
-                      {navbar}
-                      <main className="relative flex min-h-0 flex-1 flex-col">
-                        {children}
-                      </main>
-                    </LoadingProvider>
-                  </ThemeProvider>
-                </ChatProvider>
+                <RouterProvider>
+                  <ChatProvider>
+                    <ThemeProvider
+                      attribute="class"
+                      defaultTheme="system"
+                      enableSystem
+                      disableTransitionOnChange
+                    >
+                      <LoadingProvider>
+                        {navbar}
+                        <main className="relative flex min-h-0 flex-1 flex-col">
+                          {children}
+                        </main>
+                      </LoadingProvider>
+                    </ThemeProvider>
+                  </ChatProvider>
+                </RouterProvider>
               </TransfersProvider>
             </RTCProvider>
           </SWProvider>

@@ -468,15 +468,19 @@ export default function SpacePageClient({
   }, []);
 
   useEffect(() => {
-    loadSpace();
+    const hideLoading = showLoading();
+
+    loadSpace()
+      .catch(() => {
+        router.replace(`/not-found`);
+      })
+      .finally(() => {
+        hideLoading();
+      });
 
     async function loadSpace() {
-      const hideLoading = showLoading();
-
       await loadKeyFragment();
       await decryptSpace();
-
-      hideLoading();
     }
 
     async function loadKeyFragment() {
@@ -500,7 +504,7 @@ export default function SpacePageClient({
       if (!keyEntry) {
         console.log(`Missing keys for space "${_space.id}".`);
 
-        return router.replace(`/not-found`);
+        throw new Error("Key not found.");
       }
 
       const name = strDecrypt(_space.name, keyEntry.key);

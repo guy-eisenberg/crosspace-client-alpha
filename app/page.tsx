@@ -3,10 +3,10 @@
 import { indexed } from "@/clients/client/indexed";
 import { SPACE_DEFAULT_NAME } from "@/constants";
 import { useLoading } from "@/context/LoadingContext/LoadingContext";
+import { useRouter } from "@/context/RouterContext";
 import { createSpace } from "@/lib/server/createSpace";
 import strEncrypt from "@/lib/strEncrypt";
 import CryptoJS from "crypto-js";
-import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 export default function Home() {
@@ -29,7 +29,7 @@ export default function Home() {
 
       await indexed.spaces_keys.add({ id: space.id, key });
 
-      router.replace(`space/${space.id}`);
+      await router.replace(`space/${space.id}`);
 
       hideLoading();
     }
